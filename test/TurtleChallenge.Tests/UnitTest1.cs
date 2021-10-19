@@ -5,12 +5,16 @@ namespace TurtleChallenge.Tests;
 
 public class DirectionExtensionsTests
 {
-    [Fact]
-    public void RotateReturnsNewDirection()
+    [Theory]
+    [InlineData(Direction.North, Direction.East)]
+    [InlineData(Direction.East, Direction.South)]
+    [InlineData(Direction.South, Direction.West)]
+    [InlineData(Direction.West, Direction.North)]
+    internal void RotateReturnsNewDirection(Direction input, Direction expected)
     {
-        var direction = Direction.North;
+        var direction = input;
         var newDirection = direction.Rotate();
 
-        newDirection.Should().Be(Direction.East);
+        newDirection.Should().Be(expected);
     }
 }
