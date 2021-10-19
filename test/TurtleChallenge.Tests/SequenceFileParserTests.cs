@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using TurtleChallengeConsole;
 using Xunit;
 
 namespace TurtleChallenge.Tests;

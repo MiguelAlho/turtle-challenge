@@ -1,5 +1,6 @@
 using FluentAssertions;
 using System;
+using TurtleChallengeConsole;
 using Xunit;
 
 namespace TurtleChallenge.Tests;

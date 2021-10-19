@@ -3,6 +3,7 @@ using FluentAssertions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TurtleChallengeConsole;
 using Xunit;
 
 namespace TurtleChallenge.Tests;
@@ -49,22 +50,11 @@ public class SettingsParserTests
 
         //compare mines
         settings.Mines.Count.Should().Be(builder.Mines.Count());
-        //TODO: compare more...
+        foreach (var mine in builder.Mines)
+            settings.Mines.Contains(new BoundedCoordinate((ushort)mine.column, (ushort)mine.row)).Should().BeTrue();
     }
 
-    //TODO: invalid cases....
-
-    private string[] ValidFileWithNoMines => new SettingsFileBuilder()
-        .ClearMines()
-        .Build();
-
-    private string[] ValidFileWithSingleMine => new SettingsFileBuilder()
-        .ClearMines()
-        .AddSingleMine()
-        .Build();
-
-    private string[] ValidFileWithMultipleMines => new SettingsFileBuilder()
-        .Build();
+    //TODO: invalid cases....too exaustive to do at the moment for a sample
 }
 
 
@@ -113,7 +103,7 @@ public class SettingsFileBuilder
         return this;
     }
 
-
+    
     public string[] Build() 
         => new string[]
             {
