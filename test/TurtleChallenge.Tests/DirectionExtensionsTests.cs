@@ -1,4 +1,5 @@
 using FluentAssertions;
+using System;
 using Xunit;
 
 namespace TurtleChallenge.Tests;
@@ -16,5 +17,20 @@ public class DirectionExtensionsTests
         var newDirection = direction.Rotate();
 
         newDirection.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData('N', Direction.North)]
+    [InlineData('E', Direction.East)]
+    [InlineData('S', Direction.South)]
+    [InlineData('W', Direction.West)]
+    internal void MaprFromCharacterReturnsNewDirection(char input, Direction expected) 
+        => input.MapToDirection().Should().Be(expected);
+
+    [Fact]
+    public void InvalidCharThrowsIfMappingToDirection()
+    {
+        var action = () => 'X'.MapToDirection();
+        action.Should().Throw<ArgumentOutOfRangeException>();
     }
 }
