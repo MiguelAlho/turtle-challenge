@@ -47,8 +47,7 @@ public class Program {
         int i = 1;
         foreach(Moves[] sequence in sequences)
         {
-            var simulator = new Simulator(settings);
-            var result = simulator.RunSequence(sequence);
+            var result= new Simulator(settings, sequence).RunSequence();
 
             Console.WriteLine($"Sequence {i}: {GetOutputForResult(result)}!");
             i++;
@@ -67,23 +66,29 @@ public class Program {
     };
 }
 
+/// <summary>
+/// Setups up a new board to run a sequence
+/// </summary>
 class Simulator
 {
     private readonly Settings _settings;
+    private readonly Moves[] _moves;
+
     private UnboundedCoordinate _turtlePosition;
     private Direction _direction;
 
-    public Simulator(Settings settings)
+    public Simulator(Settings settings, Moves[] moves)
     {
         _settings = settings;
+        _moves = moves;
 
         _turtlePosition = new UnboundedCoordinate(settings.TurtleStart.Start.Column, settings.TurtleStart.Start.Row);
         _direction = settings.TurtleStart.Direction;
     }
 
-    public SimulationResult RunSequence(Moves[] moves)
+    public SimulationResult RunSequence()
     {
-        foreach (var move in moves)
+        foreach (var move in _moves)
         {
             MutateTurtle(move);
 
@@ -105,9 +110,10 @@ class Simulator
             && _turtlePosition.Row == _settings.Exit.Row;
 
     private bool IsTurtleAtMine() 
-        => _settings.Mines.ContainsKey(new BoundedCoordinate((ushort)_turtlePosition.Column, (ushort)_turtlePosition.Row));
+        => _settings.Mines.Contains(new BoundedCoordinate((ushort)_turtlePosition.Column, (ushort)_turtlePosition.Row));
 
-    private bool IsTurtleOutOfBounds() => _turtlePosition.Column < 0
+    private bool IsTurtleOutOfBounds() 
+        => _turtlePosition.Column < 0
             || _turtlePosition.Column >= _settings.BoardSize.Columns
             || _turtlePosition.Row < 0
             || _turtlePosition.Row >= _settings.BoardSize.Rows;
@@ -121,6 +127,9 @@ class Simulator
                 break;
             case Moves.Rotate:
                 _direction = _direction.Rotate();
+                break;
+            default:
+                throw new NotImplementedException();
                 break;
         }
 
@@ -352,7 +361,7 @@ class Settings
     public BoardSize BoardSize { get; private set; }
     public TurtleStart TurtleStart { get; private set; }
     public BoundedCoordinate Exit { get; private set; }
-    public Dictionary<BoundedCoordinate, Mine> Mines { get; private set; } = new Dictionary<BoundedCoordinate, Mine>();
+    public HashSet<BoundedCoordinate> Mines { get; private set; } = new HashSet<BoundedCoordinate>();
 
     public Settings(BoardSize boardSize, TurtleStart turtleStart, BoundedCoordinate exit, List<BoundedCoordinate> mines)
     {
@@ -362,10 +371,10 @@ class Settings
 
         foreach (var coord in mines)
         {
-            if (Mines.ContainsKey(coord))
+            if (Mines.Contains(coord))
                 throw new ArgumentException("Dulpicate mine setting found.");
             
-            Mines.Add(coord, new());
+            Mines.Add(coord);
         }
     }
 }
@@ -374,12 +383,6 @@ record BoardSize(ushort Columns, ushort Rows);
 record BoundedCoordinate(ushort Column, ushort Row);
 record UnboundedCoordinate(int Column, int Row);
 record TurtleStart(BoundedCoordinate Start, Direction Direction);
-
-class Turtle{}
-
-class Mine{}
-
-class Exit{}
 
 enum Direction
 {

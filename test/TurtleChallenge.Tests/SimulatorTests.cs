@@ -33,22 +33,22 @@ public class SimulatorTests
     [Fact]
     public void SimulationReachingExitReturnsSuccess()
     {
-        var simulator = new Simulator(SimpleBoard());
-        simulator.RunSequence(OkSequence.ToMoveArray()).Should().Be(SimulationResult.Success);
+        var simulator = new Simulator(SimpleBoard(), OkSequence.ToMoveArray());
+        simulator.RunSequence().Should().Be(SimulationResult.Success);
     }
 
     [Fact]
     public void SimulationHittingMineReturnsMineHit()
     {
-        var simulator = new Simulator(SimpleBoard());
-        simulator.RunSequence(MineSequence.ToMoveArray()).Should().Be(SimulationResult.MineHit);
+        var simulator = new Simulator(SimpleBoard(), MineSequence.ToMoveArray());
+        simulator.RunSequence().Should().Be(SimulationResult.MineHit);
     }
 
     [Fact]
     public void SimulationWithoutReachingExitNorExplodingReturnsStillInDanger()
     {
-        var simulator = new Simulator(SimpleBoard());
-        simulator.RunSequence(StuckSequence.ToMoveArray()).Should().Be(SimulationResult.StillInDanger);
+        var simulator = new Simulator(SimpleBoard(), StuckSequence.ToMoveArray());
+        simulator.RunSequence().Should().Be(SimulationResult.StillInDanger);
     }
 
     [Theory]
@@ -57,15 +57,15 @@ public class SimulatorTests
     [InlineData(OOBSequence_Right)]
     public void SimulationMovingOutOfBoundReturnsOutOfBounds(string inputSequence)
     {
-        var simulator = new Simulator(SimpleBoard());
-        simulator.RunSequence(inputSequence.ToMoveArray()).Should().Be(SimulationResult.OutOfBounds);
+        var simulator = new Simulator(SimpleBoard(), inputSequence.ToMoveArray());
+        simulator.RunSequence().Should().Be(SimulationResult.OutOfBounds);
     }
 
     [Fact]
     public void SimulationMovingOutOfBoundSouthReturnsOutOfBounds()
     {
-        var simulator = new Simulator(SimpleBoardWithMineAtUpperLeftcorner());
-        simulator.RunSequence(OOBSequence_Down.ToMoveArray()).Should().Be(SimulationResult.OutOfBounds);
+        var simulator = new Simulator(SimpleBoardWithMineAtUpperLeftcorner(), OOBSequence_Down.ToMoveArray());
+        simulator.RunSequence().Should().Be(SimulationResult.OutOfBounds);
     }
 }
 
