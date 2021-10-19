@@ -381,6 +381,13 @@ class Settings
 
 record BoardSize(ushort Columns, ushort Rows);
 record BoundedCoordinate(ushort Column, ushort Row);
+
+/// <summary>
+/// Unbounded Coordinate has a column / row pair that 
+/// can extend outside normal board limits to detect out of bounds movement
+/// </summary>
+/// <param name="Column"></param>
+/// <param name="Row"></param>
 record UnboundedCoordinate(int Column, int Row);
 record TurtleStart(BoundedCoordinate Start, Direction Direction);
 
