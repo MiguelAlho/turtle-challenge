@@ -6,6 +6,10 @@ public class Program {
     {
         // See https://aka.ms/new-console-template for more information
         Console.WriteLine("Hello, World!");
+
+        //read settings file and setup simulator
+
+        //read sequences and process each one
     }
 }
 
