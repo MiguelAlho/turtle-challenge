@@ -1,12 +1,13 @@
 ﻿using System.Collections;
 
-namespace TurtleChallenge;
+namespace TurtleChallengeConsole;
 
-public class Program {
+public class Program
+{
 
     public static int Main(string[] args)
     {
-        if(args.Length != 2)
+        if (args.Length != 2)
         {
             Console.WriteLine("Invalid arguments for the application");
             Console.WriteLine("Usage: .\\TurtleChallengeConsole.exe <settings file path> <sequence file path>");
@@ -23,7 +24,7 @@ public class Program {
             string[] settingsFileLines = File.ReadAllLines(settingsFile);
             settings = new SettingsParser().Parse(settingsFileLines);
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Console.WriteLine("Invalid settings file data");
             Console.WriteLine($"{ex.Message}");
@@ -45,9 +46,9 @@ public class Program {
 
         //read sequences and process each one
         int i = 1;
-        foreach(Moves[] sequence in sequences)
+        foreach (Moves[] sequence in sequences)
         {
-            var result= new Simulator(settings, sequence).RunSequence();
+            var result = new Simulator(settings, sequence).RunSequence();
 
             Console.WriteLine($"Sequence {i}: {GetOutputForResult(result)}!");
             i++;
@@ -92,27 +93,27 @@ class Simulator
         {
             MutateTurtle(move);
 
-            if(IsTurtleOutOfBounds())
+            if (IsTurtleOutOfBounds())
                 return SimulationResult.OutOfBounds;
 
-            if(IsTurtleAtMine())
+            if (IsTurtleAtMine())
                 return SimulationResult.MineHit;
 
-            if(IsTurtleAtExit())
+            if (IsTurtleAtExit())
                 return SimulationResult.Success;
         }
 
         return SimulationResult.StillInDanger;
     }
 
-    private bool IsTurtleAtExit() 
+    private bool IsTurtleAtExit()
         => _turtlePosition.Column == _settings.Exit.Column
             && _turtlePosition.Row == _settings.Exit.Row;
 
-    private bool IsTurtleAtMine() 
+    private bool IsTurtleAtMine()
         => _settings.Mines.Contains(new BoundedCoordinate((ushort)_turtlePosition.Column, (ushort)_turtlePosition.Row));
 
-    private bool IsTurtleOutOfBounds() 
+    private bool IsTurtleOutOfBounds()
         => _turtlePosition.Column < 0
             || _turtlePosition.Column >= _settings.BoardSize.Columns
             || _turtlePosition.Row < 0
@@ -138,9 +139,9 @@ class Simulator
 
     private UnboundedCoordinate GetNewTurtlePosition(Direction direction) => direction switch
     {
-        Direction.North => new UnboundedCoordinate(_turtlePosition.Column, _turtlePosition.Row -1),
-        Direction.East => new UnboundedCoordinate(_turtlePosition.Column +1, _turtlePosition.Row),
-        Direction.South => new UnboundedCoordinate(_turtlePosition.Column, _turtlePosition.Row +1),
+        Direction.North => new UnboundedCoordinate(_turtlePosition.Column, _turtlePosition.Row - 1),
+        Direction.East => new UnboundedCoordinate(_turtlePosition.Column + 1, _turtlePosition.Row),
+        Direction.South => new UnboundedCoordinate(_turtlePosition.Column, _turtlePosition.Row + 1),
         Direction.West => new UnboundedCoordinate(_turtlePosition.Column - 1, _turtlePosition.Row),
         _ => throw new ArgumentOutOfRangeException("Unknown direction submitted")
     };
@@ -168,14 +169,14 @@ class SequenceFileParser
 
         List<Moves[]> sequences = new List<Moves[]>();
 
-        foreach(var line in sequenceFileLines)
+        foreach (var line in sequenceFileLines)
         {
             var moveSymbols = line.Trim().ToCharArray();
-            
+
             if (moveSymbols.Length == 0)
                 throw new InvalidDataException("Empty sequences are not allowed");
 
-            foreach(var symbol in moveSymbols)
+            foreach (var symbol in moveSymbols)
             {
                 if (!ValidActions.Contains(symbol))
                     throw new ArgumentException($"Invalid symbol '{symbol}' found in sequence file.");
@@ -200,7 +201,7 @@ class SettingsParser
 
     public Settings Parse(string[] settingsFileLines)
     {
-        if(settingsFileLines.Length < 3)
+        if (settingsFileLines.Length < 3)
         {
             throw new ArgumentException("Not enough items in the file. File must define board size, starting position and exit position.");
         }
@@ -209,7 +210,7 @@ class SettingsParser
         ReadTurtleStartData(settingsFileLines[1]);
         ReadExitCoordenates(settingsFileLines[2]);
 
-        if(settingsFileLines.Length >= 3)
+        if (settingsFileLines.Length >= 3)
             ReadMines(settingsFileLines[3..]);
 
         return new Settings(_boardSize!, _turtleStart!, _exit!, _mines);
@@ -217,7 +218,7 @@ class SettingsParser
 
     private void ReadMines(string[] mineLines)
     {
-        foreach(string mineLine in mineLines)
+        foreach (string mineLine in mineLines)
         {
             var coords = mineLine.Split(",", StringSplitOptions.TrimEntries);
 
@@ -229,7 +230,7 @@ class SettingsParser
 
             _mines.Add(new BoundedCoordinate(column, row));
         }
-    }   
+    }
 
     private void ReadExitCoordenates(string line)
     {
@@ -271,10 +272,10 @@ class SettingsParser
     private void ReadBoardSize(string line)
     {
         var coords = line.Split(",", StringSplitOptions.TrimEntries);
-        
-        if(coords.Length != 2)
+
+        if (coords.Length != 2)
             throw new ArgumentException("Invalid board size definition in settings file.");
-        
+
         if (!ushort.TryParse(coords[0], out var columns))
             throw new ArgumentOutOfRangeException("Invalid board size columns value in settings file.");
         if (columns == 0)
@@ -314,7 +315,7 @@ class Sequences : IEnumerable
 {
     readonly Moves[][] _sequences;
 
-    public Sequences(IEnumerable<IEnumerable<Moves>> moveSet) 
+    public Sequences(IEnumerable<IEnumerable<Moves>> moveSet)
     {
         _sequences = moveSet.Select(m => m.ToArray()).ToArray();
     }
@@ -345,7 +346,7 @@ public static class MovesExtensions
 
     public static Moves[] ToMoveArray(this string moves)
     {
-        return moves.Select(m => ToMove(m)).ToArray();
+        return moves.Select(m => m.ToMove()).ToArray();
     }
 
     public static Moves ToMove(this char symbol) => symbol switch
@@ -373,7 +374,7 @@ class Settings
         {
             if (Mines.Contains(coord))
                 throw new ArgumentException("Dulpicate mine setting found.");
-            
+
             Mines.Add(coord);
         }
     }

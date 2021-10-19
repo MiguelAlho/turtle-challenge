@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "TurtleChallengeConsole": {
+      "commandName": "Project",
+      "commandLineArgs": "validSettings.txt simulation.txt"
+    }
+  }
+}
