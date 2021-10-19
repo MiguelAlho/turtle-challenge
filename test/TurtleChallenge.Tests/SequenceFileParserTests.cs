@@ -51,7 +51,6 @@ public class SequenceFileParserTests
         act.Should().Throw<ArgumentException>();
     }
 }
-
 public class SequenceFileBuilder
 {
     public const int DefaultSequenceCount = 3;

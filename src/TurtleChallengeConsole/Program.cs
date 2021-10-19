@@ -17,10 +17,11 @@ public class Program {
         var sequenceFile = args[1];
 
         //read settings file and setup simulator
+        Settings settings;
         try
         {
             string[] settingsFileLines = File.ReadAllLines(settingsFile);
-            var settings = new SettingsParser().Parse(settingsFileLines);
+            settings = new SettingsParser().Parse(settingsFileLines);
         }
         catch(Exception ex)
         {
@@ -29,10 +30,11 @@ public class Program {
             return -2;
         }
 
+        Sequences sequences;
         try
         {
             string[] sequenceFileLines = File.ReadAllLines(sequenceFile);
-            var sequences = new SequenceFileParser().Parse(sequenceFileLines);
+            sequences = new SequenceFileParser().Parse(sequenceFileLines);
         }
         catch (Exception ex)
         {
@@ -42,18 +44,107 @@ public class Program {
         }
 
         //read sequences and process each one
+        int i = 1;
+        foreach(Moves[] sequence in sequences)
+        {
+            var simulator = new Simulator(settings);
+            var result = simulator.RunSequence(sequence);
+
+            Console.WriteLine($"Sequence {i}: {GetOutputForResult(result)}!");
+            i++;
+        }
 
         return 0;
     }
+
+    private static object GetOutputForResult(SimulationResult result) => result switch
+    {
+        SimulationResult.Success => "Success",
+        SimulationResult.MineHit => "Mine Hit",
+        SimulationResult.StillInDanger => "Still in Danger",
+        SimulationResult.OutOfBounds => "Out of Bounds",
+        _ => throw new NotImplementedException(),
+    };
 }
 
 class Simulator
 {
-    public Simulator()
-    {
+    private readonly Settings _settings;
+    private UnboundedCoordinate _turtlePosition;
+    private Direction _direction;
 
+    public Simulator(Settings settings)
+    {
+        _settings = settings;
+
+        _turtlePosition = new UnboundedCoordinate(settings.TurtleStart.Start.Column, settings.TurtleStart.Start.Row);
+        _direction = settings.TurtleStart.Direction;
     }
+
+    public SimulationResult RunSequence(Moves[] moves)
+    {
+        foreach (var move in moves)
+        {
+            MutateTurtle(move);
+
+            if(IsTurtleOutOfBounds())
+                return SimulationResult.OutOfBounds;
+
+            if(IsTurtleAtMine())
+                return SimulationResult.MineHit;
+
+            if(IsTurtleAtExit())
+                return SimulationResult.Success;
+        }
+
+        return SimulationResult.StillInDanger;
+    }
+
+    private bool IsTurtleAtExit() 
+        => _turtlePosition.Column == _settings.Exit.Column
+            && _turtlePosition.Row == _settings.Exit.Row;
+
+    private bool IsTurtleAtMine() 
+        => _settings.Mines.ContainsKey(new BoundedCoordinate((ushort)_turtlePosition.Column, (ushort)_turtlePosition.Row));
+
+    private bool IsTurtleOutOfBounds() => _turtlePosition.Column < 0
+            || _turtlePosition.Column >= _settings.BoardSize.Columns
+            || _turtlePosition.Row < 0
+            || _turtlePosition.Row >= _settings.BoardSize.Rows;
+
+    private void MutateTurtle(Moves move)
+    {
+        switch (move)
+        {
+            case Moves.Move:
+                _turtlePosition = GetNewTurtlePosition(_direction);
+                break;
+            case Moves.Rotate:
+                _direction = _direction.Rotate();
+                break;
+        }
+
+        //is within bounds?
+    }
+
+    private UnboundedCoordinate GetNewTurtlePosition(Direction direction) => direction switch
+    {
+        Direction.North => new UnboundedCoordinate(_turtlePosition.Column, _turtlePosition.Row -1),
+        Direction.East => new UnboundedCoordinate(_turtlePosition.Column +1, _turtlePosition.Row),
+        Direction.South => new UnboundedCoordinate(_turtlePosition.Column, _turtlePosition.Row +1),
+        Direction.West => new UnboundedCoordinate(_turtlePosition.Column - 1, _turtlePosition.Row),
+        _ => throw new ArgumentOutOfRangeException("Unknown direction submitted")
+    };
 }
+
+enum SimulationResult
+{
+    StillInDanger,
+    MineHit,
+    Success,
+    OutOfBounds
+}
+
 
 class SequenceFileParser
 {
@@ -95,8 +186,8 @@ class SettingsParser
 
     private BoardSize? _boardSize;
     private TurtleStart? _turtleStart;
-    private Coordinate? _exit;
-    private List<Coordinate> _mines = new List<Coordinate>();
+    private BoundedCoordinate? _exit;
+    private List<BoundedCoordinate> _mines = new List<BoundedCoordinate>();
 
     public Settings Parse(string[] settingsFileLines)
     {
@@ -127,7 +218,7 @@ class SettingsParser
             ushort column = ParseCoordinateColumnValue(coords, "mine");
             ushort row = ParseCoordinateRowValue(coords, "mine");
 
-            _mines.Add(new Coordinate(column, row));
+            _mines.Add(new BoundedCoordinate(column, row));
         }
     }   
 
@@ -141,7 +232,7 @@ class SettingsParser
         ushort column = ParseCoordinateColumnValue(coords, "exit");
         ushort row = ParseCoordinateRowValue(coords, "exit");
 
-        _exit = new Coordinate(column, row);
+        _exit = new BoundedCoordinate(column, row);
     }
 
     private void ReadTurtleStartData(string line)
@@ -155,7 +246,7 @@ class SettingsParser
         ushort row = ParseCoordinateRowValue(coords, "turtle start");
         char direction = ParseDirectionValue(coords);
 
-        _turtleStart = new TurtleStart(new Coordinate(column, row), direction.MapToDirection());
+        _turtleStart = new TurtleStart(new BoundedCoordinate(column, row), direction.MapToDirection());
     }
 
     private static char ParseDirectionValue(string[] coords)
@@ -210,7 +301,7 @@ class SettingsParser
     }
 }
 
-class Sequences : IEnumerable<IEnumerable<Moves>>
+class Sequences : IEnumerable
 {
     readonly Moves[][] _sequences;
 
@@ -220,8 +311,6 @@ class Sequences : IEnumerable<IEnumerable<Moves>>
     }
 
     public int Count => _sequences.Length;
-
-    public IEnumerator<IEnumerable<Moves>> GetEnumerator() => this.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => _sequences.GetEnumerator();
 }
@@ -245,6 +334,11 @@ public static class MovesExtensions
         return new string(moves.Select(m => ToChar(m)).ToArray());
     }
 
+    public static Moves[] ToMoveArray(this string moves)
+    {
+        return moves.Select(m => ToMove(m)).ToArray();
+    }
+
     public static Moves ToMove(this char symbol) => symbol switch
     {
         'm' => Moves.Move,
@@ -257,10 +351,10 @@ class Settings
 {
     public BoardSize BoardSize { get; private set; }
     public TurtleStart TurtleStart { get; private set; }
-    public Coordinate Exit { get; private set; }
-    public Dictionary<Coordinate, Mine> Mines { get; private set; } = new Dictionary<Coordinate, Mine>();
+    public BoundedCoordinate Exit { get; private set; }
+    public Dictionary<BoundedCoordinate, Mine> Mines { get; private set; } = new Dictionary<BoundedCoordinate, Mine>();
 
-    public Settings(BoardSize boardSize, TurtleStart turtleStart, Coordinate exit, List<Coordinate> mines)
+    public Settings(BoardSize boardSize, TurtleStart turtleStart, BoundedCoordinate exit, List<BoundedCoordinate> mines)
     {
         BoardSize = boardSize;
         TurtleStart = turtleStart;
@@ -277,8 +371,9 @@ class Settings
 }
 
 record BoardSize(ushort Columns, ushort Rows);
-record Coordinate(ushort Column, ushort Row);
-record TurtleStart(Coordinate Start, Direction Direction);
+record BoundedCoordinate(ushort Column, ushort Row);
+record UnboundedCoordinate(int Column, int Row);
+record TurtleStart(BoundedCoordinate Start, Direction Direction);
 
 class Turtle{}
 
