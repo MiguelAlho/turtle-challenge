@@ -6,68 +6,69 @@ using System.Linq;
 using TurtleChallenge;
 using Xunit;
 
-namespace TurtleChallenge.Tests
+namespace TurtleChallenge.Tests;
+
+public class SettingsParserTests
 {
-    public class SettingsParserTests
+    [Fact]
+    public void ParseThrowsOnEmptyFile()
     {
-        [Fact]
-        public void ParseThrowsOnEmptyFile()
-        {
-            var action = () => new SettingsParser().Parse(new string[] { });
-            action.Should().Throw<ArgumentException>();
-        }
-
-        [Fact]
-        public void ValidFileWithNoMinesParsesCorrectly()
-        {
-            var builder = new SettingsFileBuilder().ClearMines();
-            var settings = new SettingsParser().Parse(builder.Build());
-
-            settings.BoardSize.Columns.Should().Be((ushort)builder.BoardSizeColumns);
-            settings.BoardSize.Rows.Should().Be((ushort)builder.BoardSizeRows);
-            settings.TurtleStart.Start.Column.Should().Be((ushort)builder.TurtleStartColumn);
-            settings.TurtleStart.Start.Row.Should().Be((ushort)builder.TurtleStartRow);
-            settings.TurtleStart.Direction.Should().Be(builder.TurtleStartDirection.MapToDirection());
-            settings.Exit.Column.Should().Be((ushort)builder.ExitColumn);
-            settings.Exit.Row.Should().Be((ushort)builder.ExitRow);
-
-            settings.Mines.Count.Should().Be(0);
-        }
-
-        [Fact]
-        public void ValidFileWithMinesParsesCorrectly()
-        {
-            var builder = new SettingsFileBuilder();
-            var settings = new SettingsParser().Parse(builder.Build());
-
-            settings.BoardSize.Columns.Should().Be((ushort)builder.BoardSizeColumns);
-            settings.BoardSize.Rows.Should().Be((ushort)builder.BoardSizeRows);
-            settings.TurtleStart.Start.Column.Should().Be((ushort)builder.TurtleStartColumn);
-            settings.TurtleStart.Start.Row.Should().Be((ushort)builder.TurtleStartRow);
-            settings.TurtleStart.Direction.Should().Be(builder.TurtleStartDirection.MapToDirection());
-            settings.Exit.Column.Should().Be((ushort)builder.ExitColumn);
-            settings.Exit.Row.Should().Be((ushort)builder.ExitRow);
-
-            //compare mines
-            settings.Mines.Count.Should().Be(builder.Mines.Count());
-            //TODO: compare more...
-        }
-
-        //TODO: invalid cases....
-
-        private string[] ValidFileWithNoMines => new SettingsFileBuilder()
-            .ClearMines()
-            .Build();
-
-        private string[] ValidFileWithSingleMine => new SettingsFileBuilder()
-            .ClearMines()
-            .AddSingleMine()
-            .Build();
-
-        private string[] ValidFileWithMultipleMines => new SettingsFileBuilder()
-            .Build();
+        var action = () => new SettingsParser().Parse(new string[] { });
+        action.Should().Throw<ArgumentException>();
     }
+
+    [Fact]
+    public void ValidFileWithNoMinesParsesCorrectly()
+    {
+        var builder = new SettingsFileBuilder().ClearMines();
+        var settings = new SettingsParser().Parse(builder.Build());
+
+        settings.BoardSize.Columns.Should().Be((ushort)builder.BoardSizeColumns);
+        settings.BoardSize.Rows.Should().Be((ushort)builder.BoardSizeRows);
+        settings.TurtleStart.Start.Column.Should().Be((ushort)builder.TurtleStartColumn);
+        settings.TurtleStart.Start.Row.Should().Be((ushort)builder.TurtleStartRow);
+        settings.TurtleStart.Direction.Should().Be(builder.TurtleStartDirection.MapToDirection());
+        settings.Exit.Column.Should().Be((ushort)builder.ExitColumn);
+        settings.Exit.Row.Should().Be((ushort)builder.ExitRow);
+
+        settings.Mines.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public void ValidFileWithMinesParsesCorrectly()
+    {
+        var builder = new SettingsFileBuilder();
+        var settings = new SettingsParser().Parse(builder.Build());
+
+        settings.BoardSize.Columns.Should().Be((ushort)builder.BoardSizeColumns);
+        settings.BoardSize.Rows.Should().Be((ushort)builder.BoardSizeRows);
+        settings.TurtleStart.Start.Column.Should().Be((ushort)builder.TurtleStartColumn);
+        settings.TurtleStart.Start.Row.Should().Be((ushort)builder.TurtleStartRow);
+        settings.TurtleStart.Direction.Should().Be(builder.TurtleStartDirection.MapToDirection());
+        settings.Exit.Column.Should().Be((ushort)builder.ExitColumn);
+        settings.Exit.Row.Should().Be((ushort)builder.ExitRow);
+
+        //compare mines
+        settings.Mines.Count.Should().Be(builder.Mines.Count());
+        //TODO: compare more...
+    }
+
+    //TODO: invalid cases....
+
+    private string[] ValidFileWithNoMines => new SettingsFileBuilder()
+        .ClearMines()
+        .Build();
+
+    private string[] ValidFileWithSingleMine => new SettingsFileBuilder()
+        .ClearMines()
+        .AddSingleMine()
+        .Build();
+
+    private string[] ValidFileWithMultipleMines => new SettingsFileBuilder()
+        .Build();
 }
+
+
 
 public class SettingsFileBuilder
 {
@@ -125,7 +126,7 @@ public class SettingsFileBuilder
         .ToArray();
 
     char CreateValidDirectionLetter()
-        => SettingsParser.ValidDirections[new Random().Next(4)];
+        => SettingsParser.ValidDirections[new Random().Next(SettingsParser.ValidDirections.Length)];
 
     List<(int column, int row)> CreateMines()
     {
@@ -140,7 +141,8 @@ public class SettingsFileBuilder
 
 public static class FixtureExtensions
 {
-    public static int CreateMaxedShortAsInt(this IFixture fixture, int max) => (int)fixture.Create<ushort>() % (max - 1);
+    public static int CreateMaxedShortAsInt(this IFixture fixture, int max) 
+        => Random.Shared.Next(max);
     
     public static int CreateNonZeroShortAsInt(this IFixture fixture) => ((int)fixture.Create<ushort>()+1) % ushort.MaxValue;
 }

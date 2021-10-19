@@ -1,4 +1,6 @@
-﻿namespace TurtleChallenge;
+﻿using System.Collections;
+
+namespace TurtleChallenge;
 
 public class Program {
 
@@ -18,6 +20,7 @@ public class Program {
         try
         {
             string[] settingsFileLines = File.ReadAllLines(settingsFile);
+            var settings = new SettingsParser().Parse(settingsFileLines);
         }
         catch(Exception ex)
         {
@@ -26,11 +29,65 @@ public class Program {
             return -2;
         }
 
+        try
+        {
+            string[] sequenceFileLines = File.ReadAllLines(sequenceFile);
+            var sequences = new SequenceFileParser().Parse(sequenceFileLines);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Invalid settings file data");
+            Console.WriteLine($"{ex.Message}");
+            return -3;
+        }
+
         //read sequences and process each one
 
         return 0;
     }
 }
+
+class Simulator
+{
+    public Simulator()
+    {
+
+    }
+}
+
+class SequenceFileParser
+{
+    public static char[] ValidActions = new char[] { 'm', 'r' };
+
+    internal Sequences Parse(string[] sequenceFileLines)
+    {
+        if (sequenceFileLines.Length == 0)
+        {
+            throw new ArgumentException("No sequences found in file.");
+        }
+
+        List<Moves[]> sequences = new List<Moves[]>();
+
+        foreach(var line in sequenceFileLines)
+        {
+            var moveSymbols = line.Trim().ToCharArray();
+            
+            if (moveSymbols.Length == 0)
+                throw new InvalidDataException("Empty sequences are not allowed");
+
+            foreach(var symbol in moveSymbols)
+            {
+                if (!ValidActions.Contains(symbol))
+                    throw new ArgumentException($"Invalid symbol '{symbol}' found in sequence file.");
+            }
+
+            sequences.Add(moveSymbols.Select(m => m.ToMove()).ToArray());
+        }
+
+        return new Sequences(sequences);
+    }
+}
+
 
 class SettingsParser
 {
@@ -48,17 +105,17 @@ class SettingsParser
             throw new ArgumentException("Not enough items in the file. File must define board size, starting position and exit position.");
         }
 
-        readBoardSize(settingsFileLines[0]);
-        readTurtleStartData(settingsFileLines[1]);
-        readExitCoordenates(settingsFileLines[2]);
+        ReadBoardSize(settingsFileLines[0]);
+        ReadTurtleStartData(settingsFileLines[1]);
+        ReadExitCoordenates(settingsFileLines[2]);
 
         if(settingsFileLines.Length >= 3)
-        readMines(settingsFileLines[3..]);
+            ReadMines(settingsFileLines[3..]);
 
         return new Settings(_boardSize!, _turtleStart!, _exit!, _mines);
     }
 
-    private void readMines(string[] mineLines)
+    private void ReadMines(string[] mineLines)
     {
         foreach(string mineLine in mineLines)
         {
@@ -74,7 +131,7 @@ class SettingsParser
         }
     }   
 
-    private void readExitCoordenates(string line)
+    private void ReadExitCoordenates(string line)
     {
         var coords = line.Split(",", StringSplitOptions.TrimEntries);
 
@@ -87,7 +144,7 @@ class SettingsParser
         _exit = new Coordinate(column, row);
     }
 
-    private void readTurtleStartData(string line)
+    private void ReadTurtleStartData(string line)
     {
         var coords = line.Split(",", StringSplitOptions.TrimEntries);
 
@@ -111,7 +168,7 @@ class SettingsParser
         return direction;
     }
 
-    private void readBoardSize(string line)
+    private void ReadBoardSize(string line)
     {
         var coords = line.Split(",", StringSplitOptions.TrimEntries);
         
@@ -136,7 +193,7 @@ class SettingsParser
     {
         if (!ushort.TryParse(coords[0], out var column))
             throw new ArgumentOutOfRangeException($"Invalid {coordType} coordinate column value in settings file.");
-        if (column >= _boardSize!.Rows)
+        if (column >= _boardSize!.Columns)
             throw new ArgumentOutOfRangeException($"Invalid {coordType} coordinate column value in settings file - column value {column} must be less then board size {_boardSize.Columns}.");
 
         return column;
@@ -153,6 +210,49 @@ class SettingsParser
     }
 }
 
+class Sequences : IEnumerable<IEnumerable<Moves>>
+{
+    readonly Moves[][] _sequences;
+
+    public Sequences(IEnumerable<IEnumerable<Moves>> moveSet) 
+    {
+        _sequences = moveSet.Select(m => m.ToArray()).ToArray();
+    }
+
+    public int Count => _sequences.Length;
+
+    public IEnumerator<IEnumerable<Moves>> GetEnumerator() => this.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => _sequences.GetEnumerator();
+}
+
+public enum Moves
+{
+    Move = 0,
+    Rotate = 1
+}
+
+public static class MovesExtensions
+{
+    public static string ToStringSequence(this Moves[] moves)
+    {
+        char ToChar(Moves m) => m switch
+        {
+            Moves.Move => 'm',
+            Moves.Rotate => 'r'
+        };
+
+        return new string(moves.Select(m => ToChar(m)).ToArray());
+    }
+
+    public static Moves ToMove(this char symbol) => symbol switch
+    {
+        'm' => Moves.Move,
+        'r' => Moves.Rotate,
+        _ => throw new ArgumentOutOfRangeException($"Unsupported move symbol '{symbol}' found")
+    };
+}
+
 class Settings
 {
     public BoardSize BoardSize { get; private set; }
@@ -167,7 +267,12 @@ class Settings
         Exit = exit;
 
         foreach (var coord in mines)
+        {
+            if (Mines.ContainsKey(coord))
+                throw new ArgumentException("Dulpicate mine setting found.");
+            
             Mines.Add(coord, new());
+        }
     }
 }
 
