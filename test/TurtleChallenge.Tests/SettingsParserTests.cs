@@ -23,13 +23,13 @@ public class SettingsParserTests
         var builder = new SettingsFileBuilder().ClearMines();
         var settings = new SettingsParser().Parse(builder.Build());
 
-        settings.BoardSize.Columns.Should().Be((ushort)builder.BoardSizeColumns);
-        settings.BoardSize.Rows.Should().Be((ushort)builder.BoardSizeRows);
-        settings.TurtleStart.Start.Column.Should().Be((ushort)builder.TurtleStartColumn);
-        settings.TurtleStart.Start.Row.Should().Be((ushort)builder.TurtleStartRow);
+        settings.BoardSize.Columns.Should().Be(builder.BoardSizeColumns);
+        settings.BoardSize.Rows.Should().Be(builder.BoardSizeRows);
+        settings.TurtleStart.Start.Column.Should().Be(builder.TurtleStartColumn);
+        settings.TurtleStart.Start.Row.Should().Be(builder.TurtleStartRow);
         settings.TurtleStart.Direction.Should().Be(builder.TurtleStartDirection.MapToDirection());
-        settings.Exit.Column.Should().Be((ushort)builder.ExitColumn);
-        settings.Exit.Row.Should().Be((ushort)builder.ExitRow);
+        settings.Exit.Column.Should().Be(builder.ExitColumn);
+        settings.Exit.Row.Should().Be(builder.ExitRow);
 
         settings.Mines.Count.Should().Be(0);
     }
@@ -40,18 +40,18 @@ public class SettingsParserTests
         var builder = new SettingsFileBuilder();
         var settings = new SettingsParser().Parse(builder.Build());
 
-        settings.BoardSize.Columns.Should().Be((ushort)builder.BoardSizeColumns);
-        settings.BoardSize.Rows.Should().Be((ushort)builder.BoardSizeRows);
-        settings.TurtleStart.Start.Column.Should().Be((ushort)builder.TurtleStartColumn);
-        settings.TurtleStart.Start.Row.Should().Be((ushort)builder.TurtleStartRow);
+        settings.BoardSize.Columns.Should().Be(builder.BoardSizeColumns);
+        settings.BoardSize.Rows.Should().Be(builder.BoardSizeRows);
+        settings.TurtleStart.Start.Column.Should().Be(builder.TurtleStartColumn);
+        settings.TurtleStart.Start.Row.Should().Be(builder.TurtleStartRow);
         settings.TurtleStart.Direction.Should().Be(builder.TurtleStartDirection.MapToDirection());
-        settings.Exit.Column.Should().Be((ushort)builder.ExitColumn);
-        settings.Exit.Row.Should().Be((ushort)builder.ExitRow);
+        settings.Exit.Column.Should().Be(builder.ExitColumn);
+        settings.Exit.Row.Should().Be(builder.ExitRow);
 
         //compare mines
         settings.Mines.Count.Should().Be(builder.Mines.Count());
         foreach (var mine in builder.Mines)
-            settings.Mines.Contains(new BoundedCoordinate((ushort)mine.column, (ushort)mine.row)).Should().BeTrue();
+            settings.Mines.Contains(new Coordinate(mine.column, mine.row)).Should().BeTrue();
     }
 
     //TODO: invalid cases....too exaustive to do at the moment for a sample
@@ -64,8 +64,8 @@ public class SettingsFileBuilder
     private static Fixture _fixture = new Fixture();
 
     //use int to be permissive on error creation
-    public int BoardSizeColumns { get; private set; } = _fixture.CreateNonZeroShortAsInt();
-    public int BoardSizeRows { get; private set; } = _fixture.CreateNonZeroShortAsInt();
+    public int BoardSizeColumns { get; private set; } = _fixture.CreateMaxedNonZeroInt(SettingsParser.MaxBoardSize);
+    public int BoardSizeRows { get; private set; } = _fixture.CreateMaxedNonZeroInt(SettingsParser.MaxBoardSize);
 
     public int TurtleStartColumn { get; private set; }
     public int TurtleStartRow { get; private set; }
@@ -81,12 +81,12 @@ public class SettingsFileBuilder
     {
         _fixture.Customize<ushort>(c => c.FromSeed(s => 1));
 
-        TurtleStartColumn = _fixture.CreateMaxedShortAsInt(BoardSizeColumns);
-        TurtleStartRow = _fixture.CreateMaxedShortAsInt(BoardSizeRows);
+        TurtleStartColumn = _fixture.CreateMaxedPositiveInt(BoardSizeColumns);
+        TurtleStartRow = _fixture.CreateMaxedPositiveInt(BoardSizeRows);
         TurtleStartDirection = CreateValidDirectionLetter();
 
-        ExitColumn = _fixture.CreateMaxedShortAsInt(BoardSizeColumns);
-        ExitRow = _fixture.CreateMaxedShortAsInt(BoardSizeRows);
+        ExitColumn = _fixture.CreateMaxedPositiveInt(BoardSizeColumns);
+        ExitRow = _fixture.CreateMaxedPositiveInt(BoardSizeRows);
 
         mines = CreateMines();
     }
@@ -99,7 +99,7 @@ public class SettingsFileBuilder
 
     public SettingsFileBuilder AddSingleMine()
     {
-        mines.Add(new(_fixture.CreateMaxedShortAsInt(BoardSizeColumns), _fixture.CreateMaxedShortAsInt(BoardSizeRows)));
+        mines.Add(new(_fixture.CreateMaxedPositiveInt(BoardSizeColumns), _fixture.CreateMaxedPositiveInt(BoardSizeRows)));
         return this;
     }
 
@@ -122,7 +122,7 @@ public class SettingsFileBuilder
         //3 for now as a default
         var newMines = new List<(int column, int row)>();
         for (int i = 0; i < 3; i++)
-            newMines.Add(new(_fixture.CreateMaxedShortAsInt(BoardSizeColumns), _fixture.CreateMaxedShortAsInt(BoardSizeRows)));
+            newMines.Add(new(_fixture.CreateMaxedPositiveInt(BoardSizeColumns), _fixture.CreateMaxedPositiveInt(BoardSizeRows)));
 
         return newMines;
     }
@@ -130,8 +130,15 @@ public class SettingsFileBuilder
 
 public static class FixtureExtensions
 {
-    public static int CreateMaxedShortAsInt(this IFixture fixture, int max) 
+    public static int CreateMaxedPositiveInt(this IFixture fixture, int max) 
         => Random.Shared.Next(max);
-    
-    public static int CreateNonZeroShortAsInt(this IFixture fixture) => ((int)fixture.Create<ushort>()+1) % ushort.MaxValue;
+
+    public static int CreateMaxedNonZeroInt(this IFixture fixture, int max)
+    {
+        var value = fixture.CreateMaxedPositiveInt(max);
+        return value == 0
+            ? value + 1
+            : value;
+
+    }
 }

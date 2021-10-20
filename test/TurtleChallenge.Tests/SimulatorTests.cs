@@ -1,5 +1,6 @@
 ﻿using FluentAssertions;
 using System.Collections.Generic;
+using System.Linq;
 using TurtleChallengeConsole;
 using Xunit;
 
@@ -9,16 +10,16 @@ public class SimulatorTests
 {
     static Settings SimpleBoard() => new Settings(
         new BoardSize(2, 2),
-        new TurtleStart(new BoundedCoordinate(0, 0), Direction.East),
-        new BoundedCoordinate(1,1),
-        new List<BoundedCoordinate>() { new BoundedCoordinate(0,1),}
+        new TurtleStart(new Coordinate(0, 0), Direction.East),
+        new Coordinate(1,1),
+        new List<Coordinate>() { new Coordinate(0,1),}
     );
 
     static Settings SimpleBoardWithMineAtUpperLeftcorner() => new Settings(
         new BoardSize(2, 2),
-        new TurtleStart(new BoundedCoordinate(0, 0), Direction.East),
-        new BoundedCoordinate(1, 1),
-        new List<BoundedCoordinate>() { new BoundedCoordinate(1,0), }
+        new TurtleStart(new Coordinate(0, 0), Direction.East),
+        new Coordinate(1, 1),
+        new List<Coordinate>() { new Coordinate(1,0), }
     );
 
     const string OkSequence = "mrm";
@@ -29,25 +30,30 @@ public class SimulatorTests
     const string OOBSequence_Right = "rrm";
     const string OOBSequence_Down = "rmm"; //needs SimpleBoardWithMineAtUpperLeftcorner
 
+    public static Moves[] MoveArrayFrom(string moves)
+    {
+        return moves.Select(m => SequenceFileParser.MoveFrom(m)).ToArray();
+    }
+
 
     [Fact]
     public void SimulationReachingExitReturnsSuccess()
     {
-        var simulator = new Simulator(SimpleBoard(), OkSequence.ToMoveArray());
+        var simulator = new Simulator(SimpleBoard(), MoveArrayFrom(OkSequence));
         simulator.RunSequence().Should().Be(SimulationResult.Success);
     }
 
     [Fact]
     public void SimulationHittingMineReturnsMineHit()
     {
-        var simulator = new Simulator(SimpleBoard(), MineSequence.ToMoveArray());
+        var simulator = new Simulator(SimpleBoard(), MoveArrayFrom(MineSequence));
         simulator.RunSequence().Should().Be(SimulationResult.MineHit);
     }
 
     [Fact]
     public void SimulationWithoutReachingExitNorExplodingReturnsStillInDanger()
     {
-        var simulator = new Simulator(SimpleBoard(), StuckSequence.ToMoveArray());
+        var simulator = new Simulator(SimpleBoard(), MoveArrayFrom(StuckSequence));
         simulator.RunSequence().Should().Be(SimulationResult.StillInDanger);
     }
 
@@ -57,14 +63,14 @@ public class SimulatorTests
     [InlineData(OOBSequence_Right)]
     public void SimulationMovingOutOfBoundReturnsOutOfBounds(string inputSequence)
     {
-        var simulator = new Simulator(SimpleBoard(), inputSequence.ToMoveArray());
+        var simulator = new Simulator(SimpleBoard(), MoveArrayFrom(inputSequence));
         simulator.RunSequence().Should().Be(SimulationResult.OutOfBounds);
     }
 
     [Fact]
     public void SimulationMovingOutOfBoundSouthReturnsOutOfBounds()
     {
-        var simulator = new Simulator(SimpleBoardWithMineAtUpperLeftcorner(), OOBSequence_Down.ToMoveArray());
+        var simulator = new Simulator(SimpleBoardWithMineAtUpperLeftcorner(), MoveArrayFrom(OOBSequence_Down));
         simulator.RunSequence().Should().Be(SimulationResult.OutOfBounds);
     }
 }

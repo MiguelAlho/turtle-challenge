@@ -4,7 +4,6 @@ namespace TurtleChallengeConsole;
 
 public class Program
 {
-
     public static int Main(string[] args)
     {
         if (args.Length != 2)
@@ -75,7 +74,7 @@ class Simulator
     private readonly Settings _settings;
     private readonly Moves[] _moves;
 
-    private UnboundedCoordinate _turtlePosition;
+    private Coordinate _turtlePosition;
     private Direction _direction;
 
     public Simulator(Settings settings, Moves[] moves)
@@ -83,7 +82,7 @@ class Simulator
         _settings = settings;
         _moves = moves;
 
-        _turtlePosition = new UnboundedCoordinate(settings.TurtleStart.Start.Column, settings.TurtleStart.Start.Row);
+        _turtlePosition = new Coordinate(settings.TurtleStart.Start.Column, settings.TurtleStart.Start.Row);
         _direction = settings.TurtleStart.Direction;
     }
 
@@ -111,7 +110,7 @@ class Simulator
             && _turtlePosition.Row == _settings.Exit.Row;
 
     private bool IsTurtleAtMine()
-        => _settings.Mines.Contains(new BoundedCoordinate((ushort)_turtlePosition.Column, (ushort)_turtlePosition.Row));
+        => _settings.Mines.Contains(new Coordinate((ushort)_turtlePosition.Column, (ushort)_turtlePosition.Row));
 
     private bool IsTurtleOutOfBounds()
         => _turtlePosition.Column < 0
@@ -137,12 +136,12 @@ class Simulator
         //is within bounds?
     }
 
-    private UnboundedCoordinate GetNewTurtlePosition(Direction direction) => direction switch
+    private Coordinate GetNewTurtlePosition(Direction direction) => direction switch
     {
-        Direction.North => new UnboundedCoordinate(_turtlePosition.Column, _turtlePosition.Row - 1),
-        Direction.East => new UnboundedCoordinate(_turtlePosition.Column + 1, _turtlePosition.Row),
-        Direction.South => new UnboundedCoordinate(_turtlePosition.Column, _turtlePosition.Row + 1),
-        Direction.West => new UnboundedCoordinate(_turtlePosition.Column - 1, _turtlePosition.Row),
+        Direction.North => new Coordinate(_turtlePosition.Column, _turtlePosition.Row - 1),
+        Direction.East => new Coordinate(_turtlePosition.Column + 1, _turtlePosition.Row),
+        Direction.South => new Coordinate(_turtlePosition.Column, _turtlePosition.Row + 1),
+        Direction.West => new Coordinate(_turtlePosition.Column - 1, _turtlePosition.Row),
         _ => throw new ArgumentOutOfRangeException("Unknown direction submitted")
     };
 }
@@ -182,22 +181,30 @@ class SequenceFileParser
                     throw new ArgumentException($"Invalid symbol '{symbol}' found in sequence file.");
             }
 
-            sequences.Add(moveSymbols.Select(m => m.ToMove()).ToArray());
+            sequences.Add(moveSymbols.Select(m => MoveFrom(m)).ToArray());
         }
 
         return new Sequences(sequences);
     }
+
+    public static Moves MoveFrom(char symbol) => symbol switch
+    {
+        'm' => Moves.Move,
+        'r' => Moves.Rotate,
+        _ => throw new ArgumentOutOfRangeException($"Unsupported move symbol '{symbol}' found")
+    };
 }
 
 
 class SettingsParser
 {
     public static char[] ValidDirections = new char[] { 'N', 'E', 'S', 'W' };
+    public static readonly int MaxBoardSize = 10_000;
 
     private BoardSize? _boardSize;
     private TurtleStart? _turtleStart;
-    private BoundedCoordinate? _exit;
-    private List<BoundedCoordinate> _mines = new List<BoundedCoordinate>();
+    private Coordinate? _exit;
+    private List<Coordinate> _mines = new List<Coordinate>();
 
     public Settings Parse(string[] settingsFileLines)
     {
@@ -225,10 +232,10 @@ class SettingsParser
             if (coords.Length != 2)
                 throw new ArgumentException("Invalid mine definition in settings file.");
 
-            ushort column = ParseCoordinateColumnValue(coords, "mine");
-            ushort row = ParseCoordinateRowValue(coords, "mine");
+            int column = ParseCoordinateColumnValue(coords, "mine");
+            int row = ParseCoordinateRowValue(coords, "mine");
 
-            _mines.Add(new BoundedCoordinate(column, row));
+            _mines.Add(new Coordinate(column, row));
         }
     }
 
@@ -239,10 +246,10 @@ class SettingsParser
         if (coords.Length != 2)
             throw new ArgumentException("Invalid board size definition in settings file.");
 
-        ushort column = ParseCoordinateColumnValue(coords, "exit");
-        ushort row = ParseCoordinateRowValue(coords, "exit");
+        int column = ParseCoordinateColumnValue(coords, "exit");
+        int row = ParseCoordinateRowValue(coords, "exit");
 
-        _exit = new BoundedCoordinate(column, row);
+        _exit = new Coordinate(column, row);
     }
 
     private void ReadTurtleStartData(string line)
@@ -252,11 +259,11 @@ class SettingsParser
         if (coords.Length != 3)
             throw new ArgumentException("Invalid turtle start position definition in settings file.");
 
-        ushort column = ParseCoordinateColumnValue(coords, "turtle start");
-        ushort row = ParseCoordinateRowValue(coords, "turtle start");
+        int column = ParseCoordinateColumnValue(coords, "turtle start");
+        int row = ParseCoordinateRowValue(coords, "turtle start");
         char direction = ParseDirectionValue(coords);
 
-        _turtleStart = new TurtleStart(new BoundedCoordinate(column, row), direction.MapToDirection());
+        _turtleStart = new TurtleStart(new Coordinate(column, row), direction.MapToDirection());
     }
 
     private static char ParseDirectionValue(string[] coords)
@@ -276,36 +283,36 @@ class SettingsParser
         if (coords.Length != 2)
             throw new ArgumentException("Invalid board size definition in settings file.");
 
-        if (!ushort.TryParse(coords[0], out var columns))
+        if (!int.TryParse(coords[0], out var columns))
             throw new ArgumentOutOfRangeException("Invalid board size columns value in settings file.");
-        if (columns == 0)
-            throw new ArgumentOutOfRangeException($"Invalid columns value in settings file - columns value must be greater than 0.");
+        if (columns <= 0 || columns > MaxBoardSize)
+            throw new ArgumentOutOfRangeException($"Invalid columns value in settings file - columns value must be in the ]0..{MaxBoardSize}] range.");
 
-        if (!ushort.TryParse(coords[1], out var rows))
+        if (!int.TryParse(coords[1], out var rows))
             throw new ArgumentOutOfRangeException("Invalid board size rows value in settings file.");
-        if (rows == 0)
-            throw new ArgumentOutOfRangeException($"Invalid rows value in settings file - rows valuemust be greater than 0.");
+        if (rows <= 0 || rows > MaxBoardSize)
+            throw new ArgumentOutOfRangeException($"Invalid rows value in settings file - rows value must be in the ]0..{MaxBoardSize}] range.");
 
 
         _boardSize = new BoardSize(columns, rows);
     }
 
-    private ushort ParseCoordinateColumnValue(string[] coords, string coordType)
+    private int ParseCoordinateColumnValue(string[] coords, string coordType)
     {
-        if (!ushort.TryParse(coords[0], out var column))
+        if (!int.TryParse(coords[0], out var column))
             throw new ArgumentOutOfRangeException($"Invalid {coordType} coordinate column value in settings file.");
-        if (column >= _boardSize!.Columns)
-            throw new ArgumentOutOfRangeException($"Invalid {coordType} coordinate column value in settings file - column value {column} must be less then board size {_boardSize.Columns}.");
+        if (column < 0 || column >= _boardSize!.Columns)
+            throw new ArgumentOutOfRangeException($"Invalid {coordType} coordinate column value in settings file - column value {column} must be in the [0..{_boardSize.Columns}] range.");
 
         return column;
     }
 
-    private ushort ParseCoordinateRowValue(string[] coords, string coordType)
+    private int ParseCoordinateRowValue(string[] coords, string coordType)
     {
-        if (!ushort.TryParse(coords[1], out var row))
+        if (!int.TryParse(coords[1], out var row))
             throw new ArgumentOutOfRangeException($"Invalid {coordType} coordinate row value in settings file.");
-        if (row >= _boardSize!.Rows)
-            throw new ArgumentOutOfRangeException($"Invalid {coordType} coordinate row value in settings file - column value {row} must be less then board size {_boardSize.Rows}.");
+        if (row < 0 || row >= _boardSize!.Rows)
+            throw new ArgumentOutOfRangeException($"Invalid {coordType} coordinate row value in settings file - column value {row} must be in the [0..{_boardSize.Rows}] range.");
 
         return row;
     }
@@ -331,40 +338,14 @@ public enum Moves
     Rotate = 1
 }
 
-public static class MovesExtensions
-{
-    public static string ToStringSequence(this Moves[] moves)
-    {
-        char ToChar(Moves m) => m switch
-        {
-            Moves.Move => 'm',
-            Moves.Rotate => 'r'
-        };
-
-        return new string(moves.Select(m => ToChar(m)).ToArray());
-    }
-
-    public static Moves[] ToMoveArray(this string moves)
-    {
-        return moves.Select(m => m.ToMove()).ToArray();
-    }
-
-    public static Moves ToMove(this char symbol) => symbol switch
-    {
-        'm' => Moves.Move,
-        'r' => Moves.Rotate,
-        _ => throw new ArgumentOutOfRangeException($"Unsupported move symbol '{symbol}' found")
-    };
-}
-
 class Settings
 {
     public BoardSize BoardSize { get; private set; }
     public TurtleStart TurtleStart { get; private set; }
-    public BoundedCoordinate Exit { get; private set; }
-    public HashSet<BoundedCoordinate> Mines { get; private set; } = new HashSet<BoundedCoordinate>();
+    public Coordinate Exit { get; private set; }
+    public HashSet<Coordinate> Mines { get; private set; } = new HashSet<Coordinate>();
 
-    public Settings(BoardSize boardSize, TurtleStart turtleStart, BoundedCoordinate exit, List<BoundedCoordinate> mines)
+    public Settings(BoardSize boardSize, TurtleStart turtleStart, Coordinate exit, List<Coordinate> mines)
     {
         BoardSize = boardSize;
         TurtleStart = turtleStart;
@@ -373,24 +354,16 @@ class Settings
         foreach (var coord in mines)
         {
             if (Mines.Contains(coord))
-                throw new ArgumentException("Dulpicate mine setting found.");
+                throw new ArgumentException($"Duplicate mine setting found: {coord}");
 
             Mines.Add(coord);
         }
     }
 }
 
-record BoardSize(ushort Columns, ushort Rows);
-record BoundedCoordinate(ushort Column, ushort Row);
-
-/// <summary>
-/// Unbounded Coordinate has a column / row pair that 
-/// can extend outside normal board limits to detect out of bounds movement
-/// </summary>
-/// <param name="Column"></param>
-/// <param name="Row"></param>
-record UnboundedCoordinate(int Column, int Row);
-record TurtleStart(BoundedCoordinate Start, Direction Direction);
+record BoardSize(int Columns, int Rows);
+record Coordinate(int Column, int Row);
+record TurtleStart(Coordinate Start, Direction Direction);
 
 enum Direction
 {
