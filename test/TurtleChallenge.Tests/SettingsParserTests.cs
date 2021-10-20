@@ -132,6 +132,12 @@ public static class FixtureExtensions
 {
     public static int CreateMaxedShortAsInt(this IFixture fixture, int max) 
         => Random.Shared.Next(max);
-    
-    public static int CreateNonZeroShortAsInt(this IFixture fixture) => ((int)fixture.Create<ushort>()+1) % ushort.MaxValue;
+
+    public static int CreateNonZeroShortAsInt(this IFixture fixture)
+    {
+        var val = fixture.CreateMaxedShortAsInt((int)ushort.MaxValue);
+        return val == 0
+            ? val + 1
+            : val;
+    }
 }

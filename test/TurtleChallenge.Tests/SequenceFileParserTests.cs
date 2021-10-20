@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using TurtleChallengeConsole;
 using Xunit;
 
@@ -52,6 +53,7 @@ public class SequenceFileParserTests
         act.Should().Throw<ArgumentException>();
     }
 }
+
 public class SequenceFileBuilder
 {
     public const int DefaultSequenceCount = 3;
@@ -82,7 +84,7 @@ public class SequenceFileBuilder
 
     public SequenceFileBuilder AddSpecificSequence(Moves[] moves)
     {
-        _sequences.Add(moves.ToStringSequence());
+        _sequences.Add(StringSequenceFrom(moves));
         return this;
     }
 
@@ -102,5 +104,15 @@ public class SequenceFileBuilder
     char CreateValidMoveLetter()
        => SequenceFileParser.ValidActions[new Random().Next(SequenceFileParser.ValidActions.Length)];
 
+    string StringSequenceFrom(Moves[] moves)
+    {
+        char ToChar(Moves m) => m switch
+        {
+            Moves.Move => 'm',
+            Moves.Rotate => 'r'
+        };
+
+        return new string(moves.Select(m => ToChar(m)).ToArray());
+    }
 
 }
